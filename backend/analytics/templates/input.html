@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2 style="margin-top: 0; margin-bottom: 1.5rem; color: var(--text-main);">Weekly Input Form</h2>
+    <form id="analyticsForm" method="POST" action="{% url 'analyse-request' %}">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="employee_id">Employee ID</label>
+            <input type="text" id="employee_id" name="employee_id" required placeholder="e.g. EMP-101">
+        </div>
+
+        <div class="form-group">
+            <label for="week_start">Week Start Date (Monday)</label>
+            <input type="date" id="week_start" name="week_start" required>
+        </div>
+
+        <div class="form-group">
+            <label>Daily Hours (Mon-Sun)</label>
+            <div class="grid-7">
+                <input type="number" name="day0" min="0" max="24" step="0.5" required placeholder="M">
+                <input type="number" name="day1" min="0" max="24" step="0.5" required placeholder="T">
+                <input type="number" name="day2" min="0" max="24" step="0.5" required placeholder="W">
+                <input type="number" name="day3" min="0" max="24" step="0.5" required placeholder="T">
+                <input type="number" name="day4" min="0" max="24" step="0.5" required placeholder="F">
+                <input type="number" name="day5" min="0" max="24" step="0.5" required placeholder="S">
+                <input type="number" name="day6" min="0" max="24" step="0.5" required placeholder="S">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="hourly_rate">Hourly Rate (£/hr)</label>
+            <input type="number" id="hourly_rate" name="hourly_rate" min="0" step="0.01" required placeholder="15.00">
+        </div>
+
+        <button type="submit">Analyse Week</button>
+    </form>
+
+    <div id="loading" class="loading" style="display: none;">
+        Submitting to SQS for asynchronous processing...
+    </div>
+</div>
+
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    document.getElementById('analyticsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const btn = form.querySelector('button');
+        const loading = document.getElementById('loading');
+
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        loading.style.display = 'block';
+
+        const daily_hours = [];
+        for (let i = 0; i < 7; i++) {
+            daily_hours.push(parseFloat(form.querySelector(`[name="day${i}"]`).value));
+        }
+
+        const payload = {
+            employee_id: document.getElementById('employee_id').value,
+            week_start: document.getElementById('week_start').value,
+            daily_hours: daily_hours,
+            hourly_rate: parseFloat(document.getElementById('hourly_rate').value)
+        };
+
+        const csrftoken = getCookie('csrftoken');
+
+        try {
+            const res = await fetch('/api/v1/workforce/analyse-request', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                // Redirect to report view indicating status is processing
+                window.location.href = `/report?job_id=${data.job_id}`;
+            } else {
+                alert("Error submitting request: " + JSON.stringify(data));
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                loading.style.display = 'none';
+            }
+        } catch (err) {
+            alert("Network error: " + err);
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            loading.style.display = 'none';
+        }
+    });
+
+    // Default week_start to last monday
+    document.addEventListener("DOMContentLoaded", () => {
+        const today = new Date();
+        const day = today.getDay() || 7; // Get current day number, converting Sun. to 7
+        if (day !== 1) today.setHours(-24 * (day - 1)); // walk backwards to Monday
+        document.getElementById('week_start').valueAsDate = today;
+    });
+</script>
+{% endblock %}

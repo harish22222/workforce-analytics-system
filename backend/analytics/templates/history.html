@@ -1,0 +1,95 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 900px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="margin: 0; color: var(--text-main);">My Analysis History</h2>
+        <a href="{% url 'input-page' %}" class="btn-primary" style="padding: 0.65rem 1.5rem; font-size: 0.875rem;">+
+            Analyse New Week</a>
+    </div>
+
+    {% if jobs %}
+    <div
+        style="overflow-x: auto; border-radius: 0.75rem; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);">
+        <table style="width: 100%; border-collapse: collapse; background: var(--card-bg);">
+            <thead>
+                <tr
+                    style="background: linear-gradient(135deg, #f5f3ff 0%, #f8fafc 100%); border-bottom: 2px solid var(--border);">
+                    <th
+                        style="padding: 1rem 1.25rem; text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                        Week Start</th>
+                    <th
+                        style="padding: 1rem 1.25rem; text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                        Total Hours</th>
+                    <th
+                        style="padding: 1rem 1.25rem; text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                        Estimated Pay</th>
+                    <th
+                        style="padding: 1rem 1.25rem; text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                        Risk Level</th>
+                    <th
+                        style="padding: 1rem 1.25rem; text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                        Compliance</th>
+                    <th
+                        style="padding: 1rem 1.25rem; text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                        Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s;"
+                    onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                    <td style="padding: 1rem 1.25rem; font-weight: 600; color: var(--text-main);">{{ job.week_start }}
+                    </td>
+                    <td style="padding: 1rem 1.25rem; color: var(--text-main);">
+                        {% if job.result and job.result.total_hours %}
+                        {{ job.result.total_hours }}h
+                        {% else %}
+                        <span style="color: var(--text-muted);">â€”</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 1.25rem; color: var(--text-main);">
+                        {% if job.result and job.result.estimated_pay %}
+                        Â£{{ job.result.estimated_pay }}
+                        {% else %}
+                        <span style="color: var(--text-muted);">â€”</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 1.25rem;">
+                        {% if job.result and job.result.risk_level %}
+                        <span class="badge {{ job.result.risk_level|lower }}">{{ job.result.risk_level }}</span>
+                        {% else %}
+                        <span style="color: var(--text-muted);">â€”</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 1.25rem;">
+                        {% if job.result and job.result.compliance_status %}
+                        <span class="badge {{ job.result.compliance_status|lower }}">{{ job.result.compliance_status }}</span>
+                        {% else %}
+                        <span style="color: var(--text-muted);">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 1.25rem;">
+                        {% if job.status == 'completed' %}
+                        <span style="color: var(--success); font-weight: 600; font-size: 0.875rem;">âœ“ Completed</span>
+                        {% elif job.status == 'processing' %}
+                        <span style="color: var(--warning); font-weight: 600; font-size: 0.875rem;">âŸ³ Processing</span>
+                        {% else %}
+                        <span style="color: var(--danger); font-weight: 600; font-size: 0.875rem;">âœ— Failed</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div
+        style="text-align: center; padding: 4rem 2rem; background: var(--card-bg); border-radius: 1rem; border: 1px solid var(--border);">
+        <p style="color: var(--text-muted); font-size: 1.125rem; margin-bottom: 1.5rem;">No analysis submissions yet.
+        </p>
+        <a href="{% url 'input-page' %}" class="btn-primary">Analyse Your First Week</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

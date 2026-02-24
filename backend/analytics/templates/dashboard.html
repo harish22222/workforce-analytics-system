@@ -1,0 +1,64 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Week Filter -->
+<div style="width: 95%; max-width: 1200px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+    <form method="GET" action="{% url 'dashboard' %}" style="display: flex; align-items: center; gap: 0.75rem;">
+        <label for="week-filter"
+            style="font-size: 0.875rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;">Filter by
+            Week:</label>
+        <select id="week-filter" name="week" onchange="this.form.submit()"
+            style="padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 0.5rem; font-size: 0.875rem; background: var(--card-bg); color: var(--text-main); cursor: pointer; outline: none; transition: border-color 0.2s; min-width: 180px;">
+            <option value="">All Weeks</option>
+            {% for week in available_weeks %}
+            <option value="{{ week }}" {% if selected_week == week %}selected{% endif %}>{{ week }}</option>
+            {% endfor %}
+        </select>
+        {% if selected_week %}
+        <a href="{% url 'dashboard' %}"
+            style="font-size: 0.8rem; color: var(--text-muted); text-decoration: none; padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; transition: all 0.2s;"
+            onmouseover="this.style.color='var(--danger)'; this.style.borderColor='var(--danger)'"
+            onmouseout="this.style.color='var(--text-muted)'; this.style.borderColor='var(--border)'">&#10005; Clear</a>
+        {% endif %}
+    </form>
+    {% if selected_week %}
+    <span
+        style="font-size: 0.8rem; color: var(--primary); font-weight: 600; background: #f5f3ff; padding: 0.35rem 0.75rem; border-radius: 9999px;">Week
+        of {{ selected_week }}</span>
+    {% endif %}
+</div>
+
+<div class="dashboard-grid">
+    <div class="stat-card total-analyses">
+        <span class="stat-label">Total Analyses</span>
+        <span class="stat-value">{{ total_jobs }}</span>
+    </div>
+
+    <div class="stat-card completed-jobs">
+        <span class="stat-label">Completed Jobs</span>
+        <span class="stat-value">{{ completed_jobs }}</span>
+    </div>
+
+    <div class="stat-card risk-high">
+        <span class="stat-label">High Risk Cases</span>
+        <span class="stat-value">{{ high_risk_cases }}</span>
+    </div>
+
+    <div class="stat-card compliance-violation">
+        <span class="stat-label">Compliance Violations</span>
+        <span class="stat-value">{{ compliance_violations }}</span>
+    </div>
+
+    <div class="stat-card">
+        <span class="stat-label">Avg Weekly Hours</span>
+        <span class="stat-value">{{ avg_weekly_hours }}h</span>
+    </div>
+</div>
+
+<div class="dashboard-actions">
+    <a href="{% url 'input-page' %}" class="btn-primary">
+        Analyse New Week
+    </a>
+</div>
+{% endblock %}
