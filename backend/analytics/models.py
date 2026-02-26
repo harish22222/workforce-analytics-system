@@ -4,7 +4,13 @@ from django.contrib.auth.models import User
 
 
 class AnalysisJob(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="jobs")
+    user = models.ForeignKey(
+    User,
+    on_delete=models.CASCADE,
+    related_name="jobs",
+    null=True,
+    blank=True
+)
     STATUS_CHOICES = [
         ('processing', 'Processing'),
         ('completed', 'Completed'),
