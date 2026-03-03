@@ -3,7 +3,9 @@
 {% block content %}
 <div class="container" id="reportContainer">
     <h2 style="margin-top: 0; color: var(--text-main);">Analysis Report</h2>
-    <p style="color: var(--text-muted); font-size: 0.875rem;">Job ID: <span id="jobIdLabel"></span></p>
+    <p style="color: var(--text-muted); font-size: 0.875rem;">
+        Job ID: <span id="jobIdLabel"></span>
+    </p>
 
     <div id="statusSection" class="loading" style="display: none;">
         Loading job results...
@@ -12,118 +14,173 @@
     <div id="errorSection" class="result-box" style="display: none; border-left: 4px solid var(--danger);">
         <h3 style="color: var(--danger); margin-top: 0;">Processing Failed</h3>
         <p id="errorMessage" style="margin-bottom: 0; color: var(--text-muted);"></p>
-        <button onclick="window.location.href='/'" style="margin-top: 1rem; background: var(--text-muted);">Return to
-            Input Form</button>
+        <button onclick="window.location.href='/'" style="margin-top: 1rem; background: var(--text-muted);">
+            Return to Input Form
+        </button>
     </div>
 
     <div id="resultsSection" style="display: none;">
         <div class="result-box">
+
             <div class="result-row">
-                <span style="font-weight: 500;">Total Hours Work:</span>
-                <span id="resTotalHours" style="font-weight: 600;"></span>
+                <span>Total Hours Work:</span>
+                <span id="totalHours"></span>
             </div>
 
             <div class="result-row">
-                <span style="font-weight: 500;">Overtime Hours:</span>
-                <span id="resOvertime" style="font-weight: 600; color: var(--warning);"></span>
+                <span>Overtime Hours:</span>
+                <span id="overtimeHours" style="color: var(--warning);"></span>
             </div>
 
             <div class="result-row">
-                <span style="font-weight: 500;">Estimated Pay:</span>
-                <span id="resPay" style="font-weight: 600; color: var(--success);"></span>
+                <span>Estimated Pay:</span>
+                <span id="estimatedPay" style="color: var(--success);">
+                    Calculating...
+                </span>
             </div>
 
             <div class="result-row">
-                <span style="font-weight: 500;">Public Holidays (Week):</span>
-                <span id="resHolidays" style="font-weight: 600;"></span>
-            </div>
-
-            <div class="result-row" style="margin-top: 1rem;">
-                <span style="font-weight: 500;">Risk Level:</span>
-                <span id="resRiskBadge" class="badge"></span>
+                <span>Public Holidays (Week):</span>
+                <span id="resHolidays"></span>
             </div>
 
             <div class="result-row">
-                <span style="font-weight: 500;">Compliance Status:</span>
-                <span id="resComplianceBadge" class="badge"></span>
+                <span>Risk Level:</span>
+                <span id="riskLevel" class="badge"></span>
             </div>
+
+            <div class="result-row">
+                <span>Compliance Status:</span>
+                <span id="complianceStatus" class="badge"></span>
+            </div>
+
         </div>
 
-        <div
-            style="margin-top: 1.5rem; padding: 1.25rem; background: #e0e7ff; border-radius: 0.75rem; border-left: 4px solid var(--primary);">
-            <h4 style="margin-top: 0; margin-bottom: 0.5rem; color: var(--primary-hover);">Recommendation</h4>
-            <p id="resRecommendation" style="margin: 0; font-size: 0.875rem; line-height: 1.5; color: #3730a3;"></p>
+        <div style="margin-top: 1.5rem; padding: 1.25rem; background: #e0e7ff; border-radius: 0.75rem;">
+            <h4>Recommendation</h4>
+            <p id="resRecommendation"></p>
         </div>
 
-        <button onclick="window.location.href='/'" style="margin-top: 2rem;">Assess Another Employee</button>
+        <button onclick="window.location.href='/'" style="margin-top: 2rem;">
+            Assess Another Employee
+        </button>
     </div>
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const jobId = urlParams.get('job_id');
+document.addEventListener("DOMContentLoaded", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const jobId = urlParams.get("job_id");
 
-        if (!jobId) {
-            window.location.href = '/';
-            return;
+    if (!jobId) {
+        window.location.href = "/";
+        return;
+    }
+
+    document.getElementById("jobIdLabel").innerText = jobId;
+    pollJobStatus(jobId);
+});
+
+
+async function pollJobStatus(jobId) {
+    document.getElementById("statusSection").style.display = "block";
+
+    try {
+        const response = await fetch(
+            `/api/v1/workforce/analyse-result?job_id=${jobId}`
+        );
+
+        const data = await response.json();
+
+        if (data.status === "processing") {
+            setTimeout(() => pollJobStatus(jobId), 3000);
         }
 
-        document.getElementById('jobIdLabel').innerText = jobId;
-        pollJobStatus(jobId);
-    });
+        else if (data.status === "completed") {
+            document.getElementById("statusSection").style.display = "none";
+            document.getElementById("resultsSection").style.display = "block";
 
-    async function pollJobStatus(jobId) {
-        document.getElementById('statusSection').style.display = 'block';
+            renderAnalytics(data.result);
+            loadPayroll(data.result);
+        }
 
-        try {
-            const res = await fetch(`/api/v1/workforce/analyse-result?job_id=${jobId}`);
-            const data = await res.json();
+        else {
+            showError(data.error || "Job failed");
+        }
 
-            if (data.status === 'processing') {
-                // Poll again in 3 seconds
-                setTimeout(() => pollJobStatus(jobId), 3000);
-            } else if (data.status === 'completed') {
-                document.getElementById('statusSection').style.display = 'none';
-                renderResults(data.result);
-            } else if (data.status === 'failed') {
-                document.getElementById('statusSection').style.display = 'none';
-                document.getElementById('errorSection').style.display = 'block';
-                document.getElementById('errorMessage').innerText = data.error || "An unknown error occurred.";
-            } else {
-                // API Error response
-                document.getElementById('statusSection').style.display = 'none';
-                document.getElementById('errorSection').style.display = 'block';
-                document.getElementById('errorMessage').innerText = data.error || "Job not found.";
+    } catch (error) {
+        showError("Could not connect to Analytics API.");
+    }
+}
+
+
+function renderAnalytics(result) {
+    document.getElementById("totalHours").innerText =
+        `${result.total_hours} hrs`;
+
+    document.getElementById("overtimeHours").innerText =
+        `${result.overtime_hours} hrs`;
+
+    document.getElementById("resHolidays").innerText =
+        result.public_holidays_in_week;
+
+    document.getElementById("riskLevel").innerText =
+        result.risk_level;
+
+    document.getElementById("complianceStatus").innerText =
+        result.compliance_status;
+
+    document.getElementById("resRecommendation").innerText =
+        result.recommendation;
+}
+
+
+// 🔥 PAYROLL LAMBDA CALL
+async function loadPayroll(result) {
+    try {
+
+        const payrollResponse = await fetch(
+            "https://wwflt306x0.execute-api.us-east-1.amazonaws.com/default/rosterhub-payroll-calculator",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    employee_id: 1,
+                    employee_name: "John",
+                    hourly_rate: 20,
+                    total_hours: parseFloat(result.total_hours),
+                    standard_hours_limit: 40,
+                    overtime_multiplier: 1.5
+                })
             }
+        );
 
-        } catch (err) {
-            document.getElementById('statusSection').style.display = 'none';
-            document.getElementById('errorSection').style.display = 'block';
-            document.getElementById('errorMessage').innerText = "Network Error: Could not connect to API.";
+        const payrollData = await payrollResponse.json();
+
+        if (payrollData.success) {
+            const grossPay = payrollData.data.gross_pay;
+
+            document.getElementById("estimatedPay").innerText =
+                `£${grossPay.toFixed(2)}`;
+        } else {
+            document.getElementById("estimatedPay").innerText =
+                "Payroll calculation failed";
         }
+
+    } catch (error) {
+        document.getElementById("estimatedPay").innerText =
+            "Payroll service unavailable";
     }
+}
 
-    function renderResults(result) {
-        document.getElementById('resultsSection').style.display = 'block';
 
-        document.getElementById('resTotalHours').innerText = `${result.total_hours} hrs`;
-        document.getElementById('resOvertime').innerText = `${result.overtime_hours} hrs`;
-
-        const pay = result.estimated_pay ? `£${result.estimated_pay}` : 'API Unavailable';
-        document.getElementById('resPay').innerText = pay;
-
-        document.getElementById('resHolidays').innerText = result.public_holidays_in_week;
-
-        const riskB = document.getElementById('resRiskBadge');
-        riskB.innerText = result.risk_level;
-        riskB.className = `badge ${result.risk_level.toLowerCase()}`;
-
-        const compB = document.getElementById('resComplianceBadge');
-        compB.innerText = result.compliance_status;
-        compB.className = `badge ${result.compliance_status === 'OK' ? 'ok' : 'violation'}`;
-
-        document.getElementById('resRecommendation').innerText = result.recommendation;
-    }
+function showError(message) {
+    document.getElementById("statusSection").style.display = "none";
+    document.getElementById("errorSection").style.display = "block";
+    document.getElementById("errorMessage").innerText = message;
+}
 </script>
+
 {% endblock %}

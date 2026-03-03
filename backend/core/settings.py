@@ -138,7 +138,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 # AWS & External APIs configuration
 AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 SQS_QUEUE_URL = os.getenv('SQS_QUEUE_URL', '')
-FRIEND_PAY_API_URL = os.getenv('FRIEND_PAY_API_URL', '')
+FRIEND_PAY_API_URL = os.getenv('FRIEND_PAY_API_URL', 'https://wwflt306x0.execute-api.us-east-1.amazonaws.com/default/rosterhub-payroll-calculator')
 PUBLIC_HOLIDAY_API_URL = os.getenv('PUBLIC_HOLIDAY_API_URL', '')
 
 # Authentication redirects

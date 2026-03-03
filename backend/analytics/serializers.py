@@ -50,7 +50,6 @@ class AnalysisResultSerializer(serializers.ModelSerializer):
             'overtime_hours',
             'risk_level',
             'compliance_status',
-            'estimated_pay',
             'public_holidays_in_week',
             'recommendation',
             'error_message',

@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
 
 from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
@@ -12,6 +12,7 @@ from django.db.models import Avg
 from .models import AnalysisJob, AnalysisResult
 from .serializers import AnalysisJobSerializer, AnalysisResultSerializer
 from .services.sqs_client import sqs_client
+from .services.external_apis import external_apis
 
 import logging
 
@@ -65,12 +66,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             jobs_qs = AnalysisJob.objects.filter(user=user)
             results_qs = AnalysisResult.objects.filter(job__user=user)
 
-        user_jobs_qs = jobs_qs
-
         available_weeks = [
             str(d) for d in
-            user_jobs_qs
-            .values_list('week_start', flat=True)
+            jobs_qs.values_list('week_start', flat=True)
             .distinct()
             .order_by('-week_start')
         ]
@@ -101,7 +99,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
 
 # ==========================
-# INLINE MOCK PROCESSOR
+# INLINE PROCESSOR (ANALYTICS ONLY)
 # ==========================
 
 def _process_job_inline(job):
@@ -112,20 +110,13 @@ def _process_job_inline(job):
         count_holidays_in_week,
         generate_recommendation,
     )
-    from .services.external_apis import external_apis
 
     daily_hours = job.daily_hours
-    hourly_rate = float(job.hourly_rate)
     week_start_str = str(job.week_start)
 
     total_hours, overtime_hours = calculate_totals(daily_hours)
     risk_level = get_risk_level(total_hours)
     compliance_status = get_compliance_status(total_hours)
-
-    estimated_pay = external_apis.get_estimated_pay(
-        total_hours,
-        hourly_rate
-    )
 
     year = week_start_str.split("-")[0]
     holidays_list = external_apis.get_public_holidays(year, "IE")
@@ -148,7 +139,6 @@ def _process_job_inline(job):
         overtime_hours=overtime_hours,
         risk_level=risk_level,
         compliance_status=compliance_status,
-        estimated_pay=estimated_pay,
         public_holidays_in_week=holidays_count,
         recommendation=recommendation,
     )
@@ -156,7 +146,7 @@ def _process_job_inline(job):
     job.status = "completed"
     job.save()
 
-    logger.info(f"[MOCK] Inline processed job {job.job_id}")
+    logger.info(f"[INLINE] Processed job {job.job_id}")
 
 
 # ==========================
@@ -164,10 +154,6 @@ def _process_job_inline(job):
 # ==========================
 
 class AnalyseRequestView(APIView):
-    """
-    POST /api/v1/workforce/analyse-request
-    Public endpoint for friend integration.
-    """
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -175,17 +161,10 @@ class AnalyseRequestView(APIView):
         serializer = AnalysisJobSerializer(data=request.data)
 
         if not serializer.is_valid():
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # Save job safely
         if request.user.is_authenticated:
-            job = serializer.save(
-                status="processing",
-                user=request.user
-            )
+            job = serializer.save(status="processing", user=request.user)
         else:
             job = serializer.save(status="processing")
 
@@ -197,7 +176,7 @@ class AnalyseRequestView(APIView):
                 daily_hours=job.daily_hours,
                 hourly_rate=float(job.hourly_rate),
             )
-        except Exception as e:
+        except Exception:
             job.status = "failed"
             job.save()
             return Response(
@@ -205,7 +184,6 @@ class AnalyseRequestView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        # Mock inline processing (local development)
         if sqs_client.is_mock:
             try:
                 _process_job_inline(job)
@@ -220,19 +198,12 @@ class AnalyseRequestView(APIView):
         job.refresh_from_db()
 
         return Response(
-            {
-                "job_id": str(job.job_id),
-                "status": job.status
-            },
+            {"job_id": str(job.job_id), "status": job.status},
             status=status.HTTP_202_ACCEPTED,
         )
 
 
 class AnalyseResultView(APIView):
-    """
-    GET /api/v1/workforce/analyse-result?job_id=...
-    Public result retrieval endpoint.
-    """
     permission_classes = [AllowAny]
 
     def get(self, request):
@@ -247,7 +218,6 @@ class AnalyseResultView(APIView):
 
         job = get_object_or_404(AnalysisJob, job_id=job_id)
 
-        # If authenticated user → enforce ownership
         if request.user.is_authenticated:
             if not request.user.is_staff and job.user != request.user:
                 return Response(
@@ -272,8 +242,11 @@ class AnalyseResultView(APIView):
                 "error": error_msg
             })
 
+        # ✅ CLEAN COMPLETED BLOCK (NO PAYROLL)
         if job.status == "completed":
+
             serializer = AnalysisResultSerializer(job.result)
+
             return Response({
                 "job_id": str(job.job_id),
                 "status": "completed",

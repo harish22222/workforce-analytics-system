@@ -5,12 +5,13 @@ from django.contrib.auth.models import User
 
 class AnalysisJob(models.Model):
     user = models.ForeignKey(
-    User,
-    on_delete=models.CASCADE,
-    related_name="jobs",
-    null=True,
-    blank=True
-)
+        User,
+        on_delete=models.CASCADE,
+        related_name="jobs",
+        null=True,
+        blank=True
+    )
+
     STATUS_CHOICES = [
         ('processing', 'Processing'),
         ('completed', 'Completed'),
@@ -25,9 +26,11 @@ class AnalysisJob(models.Model):
 
     employee_id = models.CharField(max_length=100)
     week_start = models.DateField()
+
     daily_hours = models.JSONField(
         help_text="List of 7 numbers representing hours worked (Mon-Sun)"
     )
+
     hourly_rate = models.DecimalField(max_digits=10, decimal_places=2)
 
     status = models.CharField(
@@ -89,12 +92,7 @@ class AnalysisResult(models.Model):
         blank=True
     )
 
-    estimated_pay = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True
-    )
+
 
     public_holidays_in_week = models.IntegerField(default=0)
 
