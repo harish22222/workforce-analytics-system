@@ -163,7 +163,7 @@ async function loadPayroll(result) {
             const grossPay = payrollData.data.gross_pay;
 
             document.getElementById("estimatedPay").innerText =
-                `£${grossPay.toFixed(2)}`;
+                `€${grossPay.toFixed(2)}`;
         } else {
             document.getElementById("estimatedPay").innerText =
                 "Payroll calculation failed";

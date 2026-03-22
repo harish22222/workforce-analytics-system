@@ -27,9 +27,9 @@ load_dotenv(BASE_DIR.parent / '.env')
 SECRET_KEY = 'django-insecure-s-q&ecwpzhe(&p!$)uj6nr(04w#v(ie75qnnb9)4fhufjdiq3n'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["52.205.119.9", "localhost", "127.0.0.1", "*"]
 
 
 CSRF_TRUSTED_ORIGINS = [
