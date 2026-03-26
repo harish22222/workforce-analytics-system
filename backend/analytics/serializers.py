@@ -56,7 +56,7 @@ class AnalysisResultSerializer(serializers.ModelSerializer):
         ]
 
 
-# 🔥 Optional: Clean Combined Response Serializer
+
 class JobStatusSerializer(serializers.Serializer):
     job_id = serializers.UUIDField()
     status = serializers.CharField()

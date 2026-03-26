@@ -11,7 +11,7 @@ class SQSClient:
         self.region = getattr(settings, 'AWS_REGION', 'us-east-1')
         self.is_mock = False
         
-        # Simple safeguard for local development if sqs isn't accessible
+        
         aws_key = getattr(settings, 'AWS_ACCESS_KEY_ID', 'test')
         if not self.queue_url or 'test' in aws_key:
             self.is_mock = True
@@ -30,7 +30,7 @@ class SQSClient:
         }
         
         if self.is_mock:
-            # We bypass real AWS calls if mock
+            
             logger.info(f"[MOCK SQS] Sent Message: {payload}")
             return {'MessageId': 'mock-sqs-message-id'}
             
@@ -38,7 +38,7 @@ class SQSClient:
             response = self.sqs.send_message(
                 QueueUrl=self.queue_url,
                 MessageBody=json.dumps(payload),
-                MessageGroupId="workforce-analytics", # In case it's a FIFO queue
+                MessageGroupId="workforce-analytics", 
                 MessageDeduplicationId=str(job_id)
             )
             return response

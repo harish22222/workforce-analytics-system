@@ -99,7 +99,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
 
 # ==========================
-# INLINE PROCESSOR (ANALYTICS ONLY)
+# INLINE PROCESSOR 
 # ==========================
 
 def _process_job_inline(job):
@@ -242,7 +242,7 @@ class AnalyseResultView(APIView):
                 "error": error_msg
             })
 
-        # ✅ CLEAN COMPLETED BLOCK (NO PAYROLL)
+        
         if job.status == "completed":
 
             serializer = AnalysisResultSerializer(job.result)
